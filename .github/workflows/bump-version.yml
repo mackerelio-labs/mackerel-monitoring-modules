@@ -1,0 +1,30 @@
+name: 'Bump version'
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'The next version'
+        required: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
+      - run: make bump-version
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+      - run: make build
+      - uses: peter-evans/create-pull-request@v3
+        with:
+          branch: 'release-v${{ github.event.inputs.version }}'
+          commit-message: 'chore: bump to v${{ github.event.inputs.version }}'
+          title: 'chore: bump to v${{ github.event.inputs.version }}'
+          body: |
+            Bump version to v${{ github.event.inputs.version }}
+
+            After merging this PR, create a release with `v${{ github.event.inputs.version }}` tag.
+          delete-branch: true
