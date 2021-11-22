@@ -1,4 +1,6 @@
 # cloudwatch-logs-aggregator
+**Status**: Alpha
+
 cloudwatch-logs-aggregator aggregates logs stored in [Amazon CloudWatch Logs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/WhatIsCloudWatchLogs.html) into metrics, and post those metrics to Mackerel.
 
 cloudwatch-logs-aggregator consists of two Terraform modules:
