@@ -304,15 +304,27 @@ bar.failure	2	<timestamp>
 </table>
 
 ### Default metric values
-Logs: (empty)
+Logs:
+
+``` json
+{"job_name":"foo","processed":18}
+{"job_name":"foo","processed":12}
+```
 
 Query:
 
 ```
-stats sum(processed) as processed, sum(success) as success, sum(failure) as failure
+stats sum(processed) as processed by job_name
 ```
 
-Query result: (empty)
+Query result:
+
+```
+| job_name | processed |
+| ---------| --------- |
+| foo      |        30 |
+```
+
 
 <table>
 <thead>
@@ -326,13 +338,18 @@ Query result: (empty)
 <td>
 
 ``` hcl
+metric_name_prefix    = ""
+group_field           = "job_name"
+default_field         = ""
 default_metric_values = {}
 ```
 
 </td>
 <td>
 
-(empty)
+```
+foo.processed	30	<timestamp>
+```
 
 </td>
 </tr>
@@ -340,10 +357,12 @@ default_metric_values = {}
 <td>
 
 ``` hcl
+metric_name_prefix    = ""
+group_field           = "job_name"
+default_field         = ""
 default_metric_values = {
-  processed = 0
-  success = 0
-  failure = 0
+  "foo.processed" = 0
+  "bar.processed" = 0
 }
 ```
 
@@ -351,9 +370,31 @@ default_metric_values = {
 <td>
 
 ```
-processed	0	<timestamp>
-success	0	<timestamp>
-failure	0	<timestamp>
+foo.processed	30	<timestamp>
+bar.processed	0	<timestamp>
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+``` hcl
+metric_name_prefix    = "my-batch-job"
+group_field           = "job_name"
+default_field         = "processed"
+default_metric_values = {
+  "my-batch-job.foo" = 0
+  "my-batch-job.bar" = 0
+}
+```
+
+</td>
+<td>
+
+```
+my-batch-job.foo	30	<timestamp>
+my-batch-job.bar	0	<timestamp>
 ```
 
 </td>
