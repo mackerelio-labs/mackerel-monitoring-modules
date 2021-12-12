@@ -94,8 +94,8 @@ variable "default_field" {
   default     = ""
 }
 
-variable "default_metric_values" {
-  description = "The default values used when the metrics are missing."
+variable "default_metrics" {
+  description = "The default metrics posted when the corresponding metrics are missing."
   type        = map(number)
   default     = {}
 }

@@ -632,13 +632,13 @@ func TestGenerateMetricData_use_default_values_for_missing_metrics(t *testing.T)
 		},
 	}
 	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
-	defaultMetricValues := map[string]float64{
+	defaultMetrics := map[string]float64{
 		"xxx": 0.0,
 		"yyy": 0.0,
 		"zzz": 1.0,
 	}
 
-	data, err := GenerateMetricData(logger, results, time, "", "", "", defaultMetricValues)
+	data, err := GenerateMetricData(logger, results, time, "", "", "", defaultMetrics)
 	assert.NoError(t, err)
 	if assert.Len(t, data, 3) {
 		assert.Equal(t, mackerel.MetricValue{
@@ -662,12 +662,12 @@ func TestGenerateMetricData_use_default_values_for_missing_metrics(t *testing.T)
 func TestGenerateMetricData_use_all_default_values_if_result_has_no_rows(t *testing.T) {
 	results := [][]*cloudwatchlogs.ResultField{}
 	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
-	defaultMetricValues := map[string]float64{
+	defaultMetrics := map[string]float64{
 		"xxx": 0.0,
 		"yyy": 0.0,
 	}
 
-	data, err := GenerateMetricData(logger, results, time, "", "", "", defaultMetricValues)
+	data, err := GenerateMetricData(logger, results, time, "", "", "", defaultMetrics)
 	assert.NoError(t, err)
 	if assert.Len(t, data, 2) {
 		assert.Equal(t, mackerel.MetricValue{
@@ -693,12 +693,12 @@ func TestGenerateMetricData_default_metric_names_are_compared_with_processed_met
 		},
 	}
 	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
-	defaultMetricValues := map[string]float64{
+	defaultMetrics := map[string]float64{
 		"foobar":     0.0,
 		"foobar.yyy": 0.0,
 	}
 
-	data, err := GenerateMetricData(logger, results, time, "foobar", "", "xxx", defaultMetricValues)
+	data, err := GenerateMetricData(logger, results, time, "foobar", "", "xxx", defaultMetrics)
 	assert.NoError(t, err)
 	if assert.Len(t, data, 2) {
 		assert.Equal(t, mackerel.MetricValue{

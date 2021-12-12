@@ -36,10 +36,10 @@ type Event struct {
 	IntervalInMinutes int64  `json:"interval_in_minutes"`
 	OffsetInMinutes   int64  `json:"offset_in_minutes"`
 
-	MetricNamePrefix    string             `json:"metric_name_prefix"`
-	GroupField          string             `json:"group_field"`
-	DefaultField        string             `json:"default_field"`
-	DefaultMetricValues map[string]float64 `json:"default_metric_values"`
+	MetricNamePrefix string             `json:"metric_name_prefix"`
+	GroupField       string             `json:"group_field"`
+	DefaultField     string             `json:"default_field"`
+	DefaultMetrics   map[string]float64 `json:"default_metrics"`
 
 	ServiceName string `json:"service_name"`
 }
@@ -95,7 +95,7 @@ func HandleRequest(ctx context.Context, event Event) error {
 	data, err := GenerateMetricData(
 		requestLogger,
 		result.Results, timeRange.StartTime,
-		event.MetricNamePrefix, event.GroupField, event.DefaultField, event.DefaultMetricValues,
+		event.MetricNamePrefix, event.GroupField, event.DefaultField, event.DefaultMetrics,
 	)
 	if err != nil {
 		requestLogger.Errorf("failed to generate metric data: %v", err)
@@ -284,10 +284,10 @@ func GenerateMetricData(
 	results [][]*cloudwatchlogs.ResultField,
 	time time.Time,
 	metricNamePrefix, groupField, defaultField string,
-	defaultMetricValues map[string]float64,
+	defaultMetrics map[string]float64,
 ) ([]*mackerel.MetricValue, error) {
 	if len(results) == 0 {
-		return generateDefaultMetricData(time, defaultMetricValues, nil), nil
+		return generateDefaultMetricData(time, defaultMetrics, nil), nil
 	}
 	data := make([]*mackerel.MetricValue, 0, len(results)*len(results[0]))
 	seenMetricNames := make(map[string]struct{})
@@ -332,7 +332,7 @@ func GenerateMetricData(
 			})
 		}
 	}
-	defaultData := generateDefaultMetricData(time, defaultMetricValues, seenMetricNames)
+	defaultData := generateDefaultMetricData(time, defaultMetrics, seenMetricNames)
 	return append(data, defaultData...), nil
 }
 
@@ -352,17 +352,17 @@ func joinMetricName(metricNamePrefix, groupName, name string, isDefaultField boo
 
 func generateDefaultMetricData(
 	time time.Time,
-	defaultMetricValues map[string]float64,
+	defaultMetrics map[string]float64,
 	seenMetricNames map[string]struct{},
 ) []*mackerel.MetricValue {
-	if len(defaultMetricValues) == 0 {
+	if len(defaultMetrics) == 0 {
 		return nil
 	}
-	data := make([]*mackerel.MetricValue, 0, len(defaultMetricValues))
-	for metricName, value := range defaultMetricValues {
-		if _, seen := seenMetricNames[metricName]; !seen {
+	data := make([]*mackerel.MetricValue, 0, len(defaultMetrics))
+	for name, value := range defaultMetrics {
+		if _, seen := seenMetricNames[name]; !seen {
 			data = append(data, &mackerel.MetricValue{
-				Name:  metricName,
+				Name:  name,
 				Time:  time.Unix(),
 				Value: value,
 			})
