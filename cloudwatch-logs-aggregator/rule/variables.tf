@@ -94,6 +94,12 @@ variable "default_field" {
   default     = ""
 }
 
+variable "default_metrics" {
+  description = "The default metric values posted when the corresponding values are missing in query results."
+  type        = map(number)
+  default     = {}
+}
+
 variable "service_name" {
   description = "The name of the service on Mackerel to which metrics are posted."
   type        = string

@@ -401,11 +401,20 @@ func TestRunQuery_stops_query_if_canceled(t *testing.T) {
 	assert.EqualError(t, err, ctx.Err().Error())
 }
 
+func getMetricValue(data []*mackerel.MetricValue, name string) *mackerel.MetricValue {
+	for _, v := range data {
+		if v.Name == name {
+			return v
+		}
+	}
+	return nil
+}
+
 func TestGenerateMetricData_returns_empty_data_if_result_has_no_rows(t *testing.T) {
 	results := [][]*cloudwatchlogs.ResultField{}
 	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
 
-	data, err := GenerateMetricData(logger, results, time, "", "", "")
+	data, err := GenerateMetricData(logger, results, time, "", "", "", nil)
 	assert.NoError(t, err)
 	assert.Len(t, data, 0)
 }
@@ -429,24 +438,24 @@ func TestGenerateMetricData_generates_metric_data_to_post(t *testing.T) {
 	}
 	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
 
-	data, err := GenerateMetricData(logger, results, time, "", "", "")
+	data, err := GenerateMetricData(logger, results, time, "", "", "", nil)
 	assert.NoError(t, err)
 	if assert.Len(t, data, 3) {
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "xxx",
 			Time:  time.Unix(),
 			Value: 12.3,
-		}, *data[0])
+		}, *getMetricValue(data, "xxx"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "yyy",
 			Time:  time.Unix(),
 			Value: 45.6,
-		}, *data[1])
+		}, *getMetricValue(data, "yyy"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "zzz",
 			Time:  time.Unix(),
 			Value: 78.9,
-		}, *data[2])
+		}, *getMetricValue(data, "zzz"))
 	}
 }
 
@@ -469,24 +478,24 @@ func TestGenerateMetricData_appends_metric_name_prefix_if_exists(t *testing.T) {
 	}
 	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
 
-	data, err := GenerateMetricData(logger, results, time, "foobar", "", "")
+	data, err := GenerateMetricData(logger, results, time, "foobar", "", "", nil)
 	assert.NoError(t, err)
 	if assert.Len(t, data, 3) {
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "foobar.xxx",
 			Time:  time.Unix(),
 			Value: 12.3,
-		}, *data[0])
+		}, *getMetricValue(data, "foobar.xxx"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "foobar.yyy",
 			Time:  time.Unix(),
 			Value: 45.6,
-		}, *data[1])
+		}, *getMetricValue(data, "foobar.yyy"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "foobar.zzz",
 			Time:  time.Unix(),
 			Value: 78.9,
-		}, *data[2])
+		}, *getMetricValue(data, "foobar.zzz"))
 	}
 }
 
@@ -509,24 +518,24 @@ func TestGenerateMetricData_does_not_include_default_field_in_metric_names(t *te
 	}
 	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
 
-	data, err := GenerateMetricData(logger, results, time, "foobar", "", "yyy")
+	data, err := GenerateMetricData(logger, results, time, "foobar", "", "yyy", nil)
 	assert.NoError(t, err)
 	if assert.Len(t, data, 3) {
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "foobar.xxx",
 			Time:  time.Unix(),
 			Value: 12.3,
-		}, *data[0])
+		}, *getMetricValue(data, "foobar.xxx"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "foobar",
 			Time:  time.Unix(),
 			Value: 45.6,
-		}, *data[1])
+		}, *getMetricValue(data, "foobar"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "foobar.zzz",
 			Time:  time.Unix(),
 			Value: 78.9,
-		}, *data[2])
+		}, *getMetricValue(data, "foobar.zzz"))
 	}
 }
 
@@ -577,39 +586,131 @@ func TestGenerateMetricData_groups_metrics_by_group_field(t *testing.T) {
 	}
 	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
 
-	data, err := GenerateMetricData(logger, results, time, "foobar", "group", "processed")
+	data, err := GenerateMetricData(logger, results, time, "foobar", "group", "processed", nil)
 	assert.NoError(t, err)
 	if assert.Len(t, data, 6) {
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "foobar.xxx",
 			Time:  time.Unix(),
 			Value: 12.3,
-		}, *data[0])
+		}, *getMetricValue(data, "foobar.xxx"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "foobar.xxx.error",
 			Time:  time.Unix(),
 			Value: 0.123,
-		}, *data[1])
+		}, *getMetricValue(data, "foobar.xxx.error"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "foobar.yyy",
 			Time:  time.Unix(),
 			Value: 45.6,
-		}, *data[2])
+		}, *getMetricValue(data, "foobar.yyy"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "foobar.yyy.error",
 			Time:  time.Unix(),
 			Value: 0.456,
-		}, *data[3])
+		}, *getMetricValue(data, "foobar.yyy.error"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "foobar.zzz",
 			Time:  time.Unix(),
 			Value: 78.9,
-		}, *data[4])
+		}, *getMetricValue(data, "foobar.zzz"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "foobar.zzz.error",
 			Time:  time.Unix(),
 			Value: 0.789,
-		}, *data[5])
+		}, *getMetricValue(data, "foobar.zzz.error"))
+	}
+}
+
+func TestGenerateMetricData_use_default_values_for_missing_metrics(t *testing.T) {
+	results := [][]*cloudwatchlogs.ResultField{
+		{
+			{
+				Field: aws.String("xxx"),
+				Value: aws.String("12.3"),
+			},
+		},
+	}
+	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
+	defaultMetrics := map[string]float64{
+		"xxx": 0.0,
+		"yyy": 0.0,
+		"zzz": 1.0,
+	}
+
+	data, err := GenerateMetricData(logger, results, time, "", "", "", defaultMetrics)
+	assert.NoError(t, err)
+	if assert.Len(t, data, 3) {
+		assert.Equal(t, mackerel.MetricValue{
+			Name:  "xxx",
+			Time:  time.Unix(),
+			Value: 12.3,
+		}, *getMetricValue(data, "xxx"))
+		assert.Equal(t, mackerel.MetricValue{
+			Name:  "yyy",
+			Time:  time.Unix(),
+			Value: 0.0,
+		}, *getMetricValue(data, "yyy"))
+		assert.Equal(t, mackerel.MetricValue{
+			Name:  "zzz",
+			Time:  time.Unix(),
+			Value: 1.0,
+		}, *getMetricValue(data, "zzz"))
+	}
+}
+
+func TestGenerateMetricData_use_all_default_values_if_result_has_no_rows(t *testing.T) {
+	results := [][]*cloudwatchlogs.ResultField{}
+	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
+	defaultMetrics := map[string]float64{
+		"xxx": 0.0,
+		"yyy": 0.0,
+	}
+
+	data, err := GenerateMetricData(logger, results, time, "", "", "", defaultMetrics)
+	assert.NoError(t, err)
+	if assert.Len(t, data, 2) {
+		assert.Equal(t, mackerel.MetricValue{
+			Name:  "xxx",
+			Time:  time.Unix(),
+			Value: 0.0,
+		}, *getMetricValue(data, "xxx"))
+		assert.Equal(t, mackerel.MetricValue{
+			Name:  "yyy",
+			Time:  time.Unix(),
+			Value: 0.0,
+		}, *getMetricValue(data, "yyy"))
+	}
+}
+
+func TestGenerateMetricData_default_metric_names_are_compared_with_processed_metric_names(t *testing.T) {
+	results := [][]*cloudwatchlogs.ResultField{
+		{
+			{
+				Field: aws.String("xxx"),
+				Value: aws.String("12.3"),
+			},
+		},
+	}
+	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
+	defaultMetrics := map[string]float64{
+		"foobar":     0.0,
+		"foobar.yyy": 0.0,
+	}
+
+	data, err := GenerateMetricData(logger, results, time, "foobar", "", "xxx", defaultMetrics)
+	assert.NoError(t, err)
+	if assert.Len(t, data, 2) {
+		assert.Equal(t, mackerel.MetricValue{
+			Name:  "foobar",
+			Time:  time.Unix(),
+			Value: 12.3,
+		}, *getMetricValue(data, "foobar"))
+		assert.Equal(t, mackerel.MetricValue{
+			Name:  "foobar.yyy",
+			Time:  time.Unix(),
+			Value: 0.0,
+		}, *getMetricValue(data, "foobar.yyy"))
 	}
 }
 
@@ -632,19 +733,19 @@ func TestGenerateMetricData_skips_fields_that_could_not_be_parsed(t *testing.T) 
 	}
 	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
 
-	data, err := GenerateMetricData(logger, results, time, "", "", "")
+	data, err := GenerateMetricData(logger, results, time, "", "", "", nil)
 	assert.NoError(t, err)
 	if assert.Len(t, data, 2) {
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "xxx",
 			Time:  time.Unix(),
 			Value: 12.3,
-		}, *data[0])
+		}, *getMetricValue(data, "xxx"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "zzz",
 			Time:  time.Unix(),
 			Value: 78.9,
-		}, *data[1])
+		}, *getMetricValue(data, "zzz"))
 	}
 }
 
@@ -667,19 +768,19 @@ func TestGenerateMetricData_skips_fields_that_have_empty_metric_name(t *testing.
 	}
 	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
 
-	data, err := GenerateMetricData(logger, results, time, "", "", "yyy")
+	data, err := GenerateMetricData(logger, results, time, "", "", "yyy", nil)
 	assert.NoError(t, err)
 	if assert.Len(t, data, 2) {
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "xxx",
 			Time:  time.Unix(),
 			Value: 12.3,
-		}, *data[0])
+		}, *getMetricValue(data, "xxx"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "zzz",
 			Time:  time.Unix(),
 			Value: 78.9,
-		}, *data[1])
+		}, *getMetricValue(data, "zzz"))
 	}
 }
 
@@ -716,24 +817,24 @@ func TestGenerateMetricData_skips_fields_that_have_duplicate_metric_name(t *test
 	}
 	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
 
-	data, err := GenerateMetricData(logger, results, time, "", "", "")
+	data, err := GenerateMetricData(logger, results, time, "", "", "", nil)
 	assert.NoError(t, err)
 	if assert.Len(t, data, 3) {
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "xxx",
 			Time:  time.Unix(),
 			Value: 12.3,
-		}, *data[0])
+		}, *getMetricValue(data, "xxx"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "yyy",
 			Time:  time.Unix(),
 			Value: 45.6,
-		}, *data[1])
+		}, *getMetricValue(data, "yyy"))
 		assert.Equal(t, mackerel.MetricValue{
 			Name:  "zzz",
 			Time:  time.Unix(),
 			Value: 78.9,
-		}, *data[2])
+		}, *getMetricValue(data, "zzz"))
 	}
 }
 

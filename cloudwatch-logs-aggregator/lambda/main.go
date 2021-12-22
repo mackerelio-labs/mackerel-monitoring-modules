@@ -36,9 +36,10 @@ type Event struct {
 	IntervalInMinutes int64  `json:"interval_in_minutes"`
 	OffsetInMinutes   int64  `json:"offset_in_minutes"`
 
-	MetricNamePrefix string `json:"metric_name_prefix"`
-	GroupField       string `json:"group_field"`
-	DefaultField     string `json:"default_field"`
+	MetricNamePrefix string             `json:"metric_name_prefix"`
+	GroupField       string             `json:"group_field"`
+	DefaultField     string             `json:"default_field"`
+	DefaultMetrics   map[string]float64 `json:"default_metrics"`
 
 	ServiceName string `json:"service_name"`
 }
@@ -80,14 +81,22 @@ func HandleRequest(ctx context.Context, event Event) error {
 	}
 
 	cwLogsSvc := cloudwatchlogs.New(sess)
-	timeRange := GetQueryTimeRange(time.Now(), time.Duration(event.IntervalInMinutes)*time.Minute, time.Duration(event.OffsetInMinutes)*time.Minute)
+	timeRange := GetQueryTimeRange(
+		time.Now(),
+		time.Duration(event.IntervalInMinutes)*time.Minute,
+		time.Duration(event.OffsetInMinutes)*time.Minute,
+	)
 	result, err := RunQuery(ctx, requestLogger, cwLogsSvc, event.LogGroupName, event.Query, timeRange)
 	if err != nil {
 		requestLogger.Errorf("failed to query: %v", err)
 		return err
 	}
 
-	data, err := GenerateMetricData(requestLogger, result.Results, timeRange.StartTime, event.MetricNamePrefix, event.GroupField, event.DefaultField)
+	data, err := GenerateMetricData(
+		requestLogger,
+		result.Results, timeRange.StartTime,
+		event.MetricNamePrefix, event.GroupField, event.DefaultField, event.DefaultMetrics,
+	)
 	if err != nil {
 		requestLogger.Errorf("failed to generate metric data: %v", err)
 		return err
@@ -185,7 +194,13 @@ type CWLogsService interface {
 	GetQueryResultsWithContext(ctx aws.Context, input *cloudwatchlogs.GetQueryResultsInput, opts ...request.Option) (*cloudwatchlogs.GetQueryResultsOutput, error)
 }
 
-func RunQuery(ctx context.Context, logger logrus.FieldLogger, svc CWLogsService, logGroupName, query string, timeRange *QueryTimeRange) (*cloudwatchlogs.GetQueryResultsOutput, error) {
+func RunQuery(
+	ctx context.Context,
+	logger logrus.FieldLogger,
+	svc CWLogsService,
+	logGroupName, query string,
+	timeRange *QueryTimeRange,
+) (*cloudwatchlogs.GetQueryResultsOutput, error) {
 	q, err := svc.StartQueryWithContext(ctx, &cloudwatchlogs.StartQueryInput{
 		LogGroupName: aws.String(logGroupName),
 		StartTime:    aws.Int64(timeRange.StartTime.Unix()),
@@ -264,9 +279,15 @@ func withFilterByTimeRange(query string, timeRange *QueryTimeRange) string {
 	return b.String()
 }
 
-func GenerateMetricData(logger logrus.FieldLogger, results [][]*cloudwatchlogs.ResultField, time time.Time, metricNamePrefix, groupField, defaultField string) ([]*mackerel.MetricValue, error) {
+func GenerateMetricData(
+	logger logrus.FieldLogger,
+	results [][]*cloudwatchlogs.ResultField,
+	time time.Time,
+	metricNamePrefix, groupField, defaultField string,
+	defaultMetrics map[string]float64,
+) ([]*mackerel.MetricValue, error) {
 	if len(results) == 0 {
-		return nil, nil
+		return generateDefaultMetricData(time, defaultMetrics, nil), nil
 	}
 	data := make([]*mackerel.MetricValue, 0, len(results)*len(results[0]))
 	seenMetricNames := make(map[string]struct{})
@@ -311,7 +332,8 @@ func GenerateMetricData(logger logrus.FieldLogger, results [][]*cloudwatchlogs.R
 			})
 		}
 	}
-	return data, nil
+	defaultData := generateDefaultMetricData(time, defaultMetrics, seenMetricNames)
+	return append(data, defaultData...), nil
 }
 
 func joinMetricName(metricNamePrefix, groupName, name string, isDefaultField bool) string {
@@ -328,11 +350,37 @@ func joinMetricName(metricNamePrefix, groupName, name string, isDefaultField boo
 	return strings.Join(names, ".")
 }
 
+func generateDefaultMetricData(
+	time time.Time,
+	defaultMetrics map[string]float64,
+	seenMetricNames map[string]struct{},
+) []*mackerel.MetricValue {
+	if len(defaultMetrics) == 0 {
+		return nil
+	}
+	data := make([]*mackerel.MetricValue, 0, len(defaultMetrics))
+	for name, value := range defaultMetrics {
+		if _, seen := seenMetricNames[name]; !seen {
+			data = append(data, &mackerel.MetricValue{
+				Name:  name,
+				Time:  time.Unix(),
+				Value: value,
+			})
+		}
+	}
+	return data
+}
+
 type MackerelClient interface {
 	PostServiceMetricValues(serviceName string, metricValues []*mackerel.MetricValue) error
 }
 
-func PostMetricData(logger logrus.FieldLogger, client MackerelClient, serviceName string, data []*mackerel.MetricValue) error {
+func PostMetricData(
+	logger logrus.FieldLogger,
+	client MackerelClient,
+	serviceName string,
+	data []*mackerel.MetricValue,
+) error {
 	logger.Debug("posting metric data")
 	err := client.PostServiceMetricValues(serviceName, data)
 	if err == nil {

@@ -27,6 +27,7 @@ resource "aws_cloudwatch_event_target" "this" {
     metric_name_prefix = var.metric_name_prefix
     group_field        = var.group_field
     default_field      = var.default_field
+    default_metrics    = var.default_metrics
 
     service_name = var.service_name
   })

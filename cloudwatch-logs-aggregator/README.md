@@ -64,7 +64,7 @@ module "cw_logs_aggregator_rule_batch_jobs" {
 
   # Query settings
   log_group_name      = "/my/log/group"
-  query               = "stats sum(count) as count by job_name"
+  query               = "stats sum(count) as `\"count\"` by job_name"
   metric_name_prefix  = "batch-job"
   group_field         = "job_name"
   schedule_expression = "rate(5 minutes)"
@@ -87,6 +87,7 @@ module "cw_logs_aggregator_rule_batch_jobs" {
 | `metric_name_prefix` | The common prefix appended to metric names. See the [Metrics](#metrics) section below. | `""` |
 | `group_field` | The field name that is used to group metrics. See the [Metrics](#metrics) section below. | `""` |
 | `default_field` | The field name that is not included in metric names. See the [Metrics](#metrics) section below. | `""` |
+| `default_metrics` | The default metric values posted when the corresponding values are missing in query results. | `{}` |
 | `schedule_expression` | The schedule expression of the rule specifying the execution interval. Usually the execution interval is equal to the query interval. See [the document](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-create-rule-schedule.html) for the expression syntax. | |
 | `interval_in_minutes` | The interval of the query time range, in minutes. | |
 | `offset_in_minutes` | The offset of the query time range, in minutes. Usually this is the assumed maximum delay of logs. | `10` |
@@ -114,7 +115,7 @@ Logs:
 Query:
 
 ```
-stats sum(processed) as processed, sum(success) as success, sum(failure) as failure
+stats sum(processed) as `"processed"`, sum(success) as `"success"`, sum(failure) as `"failure"`
 ```
 
 Query result:
@@ -209,7 +210,7 @@ Logs:
 Query:
 
 ```
-stats sum(processed) as processed, sum(success) as success, sum(failure) as failure by job_name
+stats sum(processed) as `"processed"`, sum(success) as `"success"`, sum(failure) as `"failure"` by job_name
 ```
 
 Query result:
@@ -295,6 +296,105 @@ foo.failure	5	<timestamp>
 bar	8	<timestamp>
 bar.success	6	<timestamp>
 bar.failure	2	<timestamp>
+```
+
+</td>
+</tr>
+</tbody>
+</table>
+
+### Default metrics
+Logs:
+
+``` json
+{"job_name":"foo","processed":18}
+{"job_name":"foo","processed":12}
+```
+
+Query:
+
+```
+stats sum(processed) as `"processed"` by job_name
+```
+
+Query result:
+
+```
+| job_name | processed |
+| ---------| --------- |
+| foo      |        30 |
+```
+
+
+<table>
+<thead>
+<tr>
+<th>Rule settings</th>
+<th>Metrics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+
+``` hcl
+metric_name_prefix = ""
+group_field        = "job_name"
+default_field      = ""
+default_metrics    = {}
+```
+
+</td>
+<td>
+
+```
+foo.processed	30	<timestamp>
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+``` hcl
+metric_name_prefix = ""
+group_field        = "job_name"
+default_field      = ""
+default_metrics    = {
+  "foo.processed" = 0
+  "bar.processed" = 0
+}
+```
+
+</td>
+<td>
+
+```
+foo.processed	30	<timestamp>
+bar.processed	0	<timestamp>
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+``` hcl
+metric_name_prefix = "my-batch-job"
+group_field        = "job_name"
+default_field      = "processed"
+default_metrics    = {
+  "my-batch-job.foo" = 0
+  "my-batch-job.bar" = 0
+}
+```
+
+</td>
+<td>
+
+```
+my-batch-job.foo	30	<timestamp>
+my-batch-job.bar	0	<timestamp>
 ```
 
 </td>
