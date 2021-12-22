@@ -838,6 +838,41 @@ func TestGenerateMetricData_skips_fields_that_have_duplicate_metric_name(t *test
 	}
 }
 
+func TestGenerateMetricData_sanitizes_metric_name_components(t *testing.T) {
+	results := [][]*cloudwatchlogs.ResultField{
+		{
+			{
+				Field: aws.String("group"),
+				Value: aws.String("xxx.~yyy"),
+			},
+			{
+				Field: aws.String("~processed"),
+				Value: aws.String("12.3"),
+			},
+			{
+				Field: aws.String("~error"),
+				Value: aws.String("0.123"),
+			},
+		},
+	}
+	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
+
+	data, err := GenerateMetricData(logger, results, time, "foo.~bar", "group", "~processed", nil)
+	assert.NoError(t, err)
+	if assert.Len(t, data, 2) {
+		assert.Equal(t, mackerel.MetricValue{
+			Name:  "foo.bar.xxx.yyy",
+			Time:  time.Unix(),
+			Value: 12.3,
+		}, *getMetricValue(data, "foo.bar.xxx.yyy"))
+		assert.Equal(t, mackerel.MetricValue{
+			Name:  "foo.bar.xxx.yyy.error",
+			Time:  time.Unix(),
+			Value: 0.123,
+		}, *getMetricValue(data, "foo.bar.xxx.yyy.error"))
+	}
+}
+
 type mockMackerelClient struct {
 	input *postServiceMetricValuesInput
 }

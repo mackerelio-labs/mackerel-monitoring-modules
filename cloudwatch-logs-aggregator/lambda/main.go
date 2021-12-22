@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -315,7 +316,9 @@ func GenerateMetricData(
 				groupLogger.WithField("name", name).Warnf("field skipped: failed to parse value %#v", valueStr)
 				continue
 			}
-			metricName := joinMetricName(metricNamePrefix, groupName, name, isDefaultField)
+			metricName := sanitizeMetricName(
+				joinMetricNameComponents(metricNamePrefix, groupName, name, isDefaultField),
+			)
 			if metricName == "" {
 				groupLogger.WithField("name", name).Warn("field skipped: empty metric name")
 				continue
@@ -336,7 +339,7 @@ func GenerateMetricData(
 	return append(data, defaultData...), nil
 }
 
-func joinMetricName(metricNamePrefix, groupName, name string, isDefaultField bool) string {
+func joinMetricNameComponents(metricNamePrefix, groupName, name string, isDefaultField bool) string {
 	names := make([]string, 0, 3)
 	if metricNamePrefix != "" {
 		names = append(names, metricNamePrefix)
@@ -348,6 +351,12 @@ func joinMetricName(metricNamePrefix, groupName, name string, isDefaultField boo
 		names = append(names, name)
 	}
 	return strings.Join(names, ".")
+}
+
+var invalidMetricNameCharRegexp = regexp.MustCompile("[^a-zA-Z0-9\\._\\-]")
+
+func sanitizeMetricName(name string) string {
+	return invalidMetricNameCharRegexp.ReplaceAllString(name, "")
 }
 
 func generateDefaultMetricData(
