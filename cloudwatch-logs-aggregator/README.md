@@ -118,6 +118,9 @@ Query:
 stats sum(processed) as `~processed`, sum(success) as `~success`, sum(failure) as `~failure`
 ```
 
+(Because `stats ... as ...` does not allow renaming statistics like `sum()`s to the same name as the existing fields like `processed`, we add a character `~` before them.
+These `~`s and [characters that are not valid in metric names](https://mackerel.io/api-docs/entry/host-metrics#post) are stripped before posting to Mackerel.)
+
 Query result:
 
 ```
