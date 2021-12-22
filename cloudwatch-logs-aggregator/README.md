@@ -64,7 +64,7 @@ module "cw_logs_aggregator_rule_batch_jobs" {
 
   # Query settings
   log_group_name      = "/my/log/group"
-  query               = "stats sum(count) as `count` by job_name"
+  query               = "stats sum(count) as `~count` by job_name"
   metric_name_prefix  = "batch-job"
   group_field         = "job_name"
   schedule_expression = "rate(5 minutes)"
@@ -115,15 +115,15 @@ Logs:
 Query:
 
 ```
-stats sum(processed) as `processed`, sum(success) as `success`, sum(failure) as `failure`
+stats sum(processed) as `~processed`, sum(success) as `~success`, sum(failure) as `~failure`
 ```
 
 Query result:
 
 ```
-| processed | success | failure |
-| --------- | ------- | ------- |
-|        30 |      25 |       5 |
+| ~processed | ~success | ~failure |
+| ---------- | -------- | -------- |
+|         30 |       25 |        5 |
 ```
 
 <table>
@@ -180,7 +180,7 @@ my-batch-job.failure	5	<timestamp>
 ``` hcl
 metric_name_prefix = "my-batch-job"
 group_field        = ""
-default_field      = "processed"
+default_field      = "~processed"
 ```
 
 </td>
@@ -210,16 +210,16 @@ Logs:
 Query:
 
 ```
-stats sum(processed) as `processed`, sum(success) as `success`, sum(failure) as `failure` by job_name
+stats sum(processed) as `~processed`, sum(success) as `~success`, sum(failure) as `~failure` by job_name
 ```
 
 Query result:
 
 ```
-| job_name | processed | success | failure |
-| ---------| --------- | ------- | ------- |
-| foo      |        30 |      25 |       5 |
-| bar      |         8 |       6 |       2 |
+| job_name | ~processed | ~success | ~failure |
+| ---------| ---------- | -------- | -------- |
+| foo      |         30 |       25 |        5 |
+| bar      |          8 |        6 |        2 |
 ```
 
 
@@ -283,7 +283,7 @@ my-batch-job.bar.failure	2	<timestamp>
 ``` hcl
 metric_name_prefix = ""
 group_field        = "job_name"
-default_field      = "processed"
+default_field      = "~processed"
 ```
 
 </td>
@@ -314,7 +314,7 @@ Logs:
 Query:
 
 ```
-stats sum(processed) as `processed` by job_name
+stats sum(processed) as `~processed` by job_name
 ```
 
 Query result:
@@ -382,7 +382,7 @@ bar.processed	0	<timestamp>
 ``` hcl
 metric_name_prefix = "my-batch-job"
 group_field        = "job_name"
-default_field      = "processed"
+default_field      = "~processed"
 default_metrics    = {
   "my-batch-job.foo" = 0
   "my-batch-job.bar" = 0
