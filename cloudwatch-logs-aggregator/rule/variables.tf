@@ -95,7 +95,7 @@ variable "default_field" {
 }
 
 variable "default_metrics" {
-  description = "The default metrics posted when the corresponding metrics are missing."
+  description = "The default metric values posted when the corresponding values are missing in query results."
   type        = map(number)
   default     = {}
 }
