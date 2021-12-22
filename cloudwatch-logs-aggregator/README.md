@@ -64,7 +64,7 @@ module "cw_logs_aggregator_rule_batch_jobs" {
 
   # Query settings
   log_group_name      = "/my/log/group"
-  query               = "stats sum(count) as count by job_name"
+  query               = "stats sum(count) as `\"count\"` by job_name"
   metric_name_prefix  = "batch-job"
   group_field         = "job_name"
   schedule_expression = "rate(5 minutes)"
@@ -115,7 +115,7 @@ Logs:
 Query:
 
 ```
-stats sum(processed) as processed, sum(success) as success, sum(failure) as failure
+stats sum(processed) as `"processed"`, sum(success) as `"success"`, sum(failure) as `"failure"`
 ```
 
 Query result:
@@ -210,7 +210,7 @@ Logs:
 Query:
 
 ```
-stats sum(processed) as processed, sum(success) as success, sum(failure) as failure by job_name
+stats sum(processed) as `"processed"`, sum(success) as `"success"`, sum(failure) as `"failure"` by job_name
 ```
 
 Query result:
@@ -314,7 +314,7 @@ Logs:
 Query:
 
 ```
-stats sum(processed) as processed by job_name
+stats sum(processed) as `"processed"` by job_name
 ```
 
 Query result:
