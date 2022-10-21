@@ -28,7 +28,7 @@ The cloudwatch-logs-aggregator-lambda module manages a Lambda function that runs
 ### Example
 ``` hcl
 module "cw_logs_aggregator_lambda" {
-  source = "github.com/mackerelio-labs/mackerel-monitoring-modules//cloudwatch-logs-aggregator/lambda?ref=v0.1.2"
+  source = "github.com/mackerelio-labs/mackerel-monitoring-modules//cloudwatch-logs-aggregator/lambda?ref=vv0.1.3"
 
   region = "ap-northeast-1"
 }
@@ -52,7 +52,7 @@ You can attach multiple rules for a signle Lambda function.
 ### Example
 ``` hcl
 module "cw_logs_aggregator_rule_batch_jobs" {
-  source = "github.com/mackerelio-labs/mackerel-monitoring-modules//cloudwatch-logs-aggregator/rule?ref=v0.1.2"
+  source = "github.com/mackerelio-labs/mackerel-monitoring-modules//cloudwatch-logs-aggregator/rule?ref=vv0.1.3"
 
   region       = "ap-northeast-1"
   rule_name    = "mackerel-cloudwatch-logs-aggregator-batch-jobs"
