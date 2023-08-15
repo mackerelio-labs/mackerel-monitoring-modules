@@ -32,3 +32,9 @@ variable "log_retention_in_days" {
   type        = number
   default     = 0
 }
+
+variable "tags" {
+  description = "Tags of the Lambda function"
+  type        = map(any)
+  default     = {}
+}
