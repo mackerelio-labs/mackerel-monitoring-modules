@@ -63,6 +63,7 @@ resource "aws_lambda_function" "this" {
   source_code_hash = filebase64sha256(local.function_zip)
 
   depends_on = [aws_cloudwatch_log_group.this]
+  tags       = var.tags
 }
 
 resource "aws_cloudwatch_log_group" "this" {
