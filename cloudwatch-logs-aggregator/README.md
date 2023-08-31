@@ -43,6 +43,7 @@ module "cw_logs_aggregator_lambda" {
 | `memory_size_in_mb` | The memory size of the Lambda function, in megabytes. | `128` |
 | `timeout_in_seconds` | The maximum execution time of the Lambda function, in seconds. | `60` |
 | `log_retention_in_days` | The retention of the Lambda function's log group, in days. | `0` (never expire) |
+| `tags` | The tags to be assigned to Lambda on AWS.(Specified by `Key = "Value"` map ) | |
 
 ## cloudwatch-logs-aggregator-rule
 The cloudwatch-logs-aggregator-rule module manages an EventBridge rule that periodically dispatches events to a Lambda function created by the cloudwatch-logs-aggregator-lambda module.
