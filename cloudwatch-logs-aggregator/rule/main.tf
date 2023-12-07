@@ -3,9 +3,10 @@ provider "aws" {
 }
 
 resource "aws_cloudwatch_event_rule" "this" {
-  name                = var.rule_name
-  description         = "created by mackerel-monitoring-modules"
-  is_enabled          = var.is_enabled
+  name        = var.rule_name
+  description = "created by mackerel-monitoring-modules"
+  // TODO we will follow upstream?
+  state               = var.is_enabled
   schedule_expression = var.schedule_expression
 }
 
