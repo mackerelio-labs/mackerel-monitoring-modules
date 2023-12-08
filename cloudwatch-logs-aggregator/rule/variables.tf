@@ -10,7 +10,7 @@ variable "rule_name" {
 
 variable "state" {
   description = "Whether the rules is enabled or not."
-  type        = "string"
+  type        = string
   default     = "ENABLED"
 }
 
