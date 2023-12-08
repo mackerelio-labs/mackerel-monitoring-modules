@@ -8,10 +8,10 @@ variable "rule_name" {
   type        = string
 }
 
-variable "is_enabled" {
+variable "state" {
   description = "Whether the rules is enabled or not."
-  type        = bool
-  default     = true
+  type        = string
+  default     = "ENABLED"
 }
 
 variable "schedule_expression" {

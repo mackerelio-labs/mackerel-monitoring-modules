@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.27.0"
+    }
+  }
+}
 provider "aws" {
   region = var.region
 }
@@ -5,7 +13,7 @@ provider "aws" {
 resource "aws_cloudwatch_event_rule" "this" {
   name                = var.rule_name
   description         = "created by mackerel-monitoring-modules"
-  is_enabled          = var.is_enabled
+  state               = var.state
   schedule_expression = var.schedule_expression
 }
 
