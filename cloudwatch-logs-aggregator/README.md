@@ -27,17 +27,19 @@ The cloudwatch-logs-aggregator-lambda module manages a Lambda function that runs
 
 ### Example
 ``` hcl
+provider "aws" {
+  region = "ap-northeast-1"
+  // >= 5.27.0 is required
+}
+
 module "cw_logs_aggregator_lambda" {
   source = "github.com/mackerelio-labs/mackerel-monitoring-modules//cloudwatch-logs-aggregator/lambda?ref=v0.2.2"
-
-  region = "ap-northeast-1"
 }
 ```
 
 ### Variables
 | Name | Description | Default |
 | --- | --- | --- |
-| `region` | The AWS region in which the resources are created. | |
 | `iam_role_name` | The name of the Lambda function's execution role. | `"mackerel-cloudwatch-logs-aggregator-lambda"` |
 | `function_name` | The name of the Lambda function. | `"mackerel-cloudwatch-logs-aggregator"` |
 | `memory_size_in_mb` | The memory size of the Lambda function, in megabytes. | `128` |
@@ -52,10 +54,14 @@ You can attach multiple rules for a signle Lambda function.
 
 ### Example
 ``` hcl
+provider "aws" {
+  region = "ap-northeast-1"
+  // >= 5.27.0 is required
+}
+
 module "cw_logs_aggregator_rule_batch_jobs" {
   source = "github.com/mackerelio-labs/mackerel-monitoring-modules//cloudwatch-logs-aggregator/rule?ref=v0.2.2"
 
-  region       = "ap-northeast-1"
   rule_name    = "mackerel-cloudwatch-logs-aggregator-batch-jobs"
   function_arn = module.cw_logs_aggregator_lambda.function_arn
 
