@@ -83,7 +83,6 @@ module "cw_logs_aggregator_rule_batch_jobs" {
 ### Variables
 | Name | Description | Default |
 | --- | --- | --- |
-| `region` | The AWS region in which the resources are created. | |
 | `rule_name` | The name of the EventBridge rule. | |
 | `function_arn` | The ARN of the target Lambda function. | |
 | `state` | Whether the rules is enabled or not. See [the document](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_rule#state) | `"ENABLED"` |
