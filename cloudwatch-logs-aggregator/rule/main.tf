@@ -6,9 +6,6 @@ terraform {
     }
   }
 }
-provider "aws" {
-  region = var.region
-}
 
 resource "aws_cloudwatch_event_rule" "this" {
   name                = var.rule_name

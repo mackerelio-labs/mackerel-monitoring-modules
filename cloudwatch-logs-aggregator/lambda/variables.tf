@@ -1,8 +1,3 @@
-variable "region" {
-  description = "The AWS region in which the resources are created."
-  type        = string
-}
-
 variable "iam_role_name" {
   description = "The name of the Lambda function's execution role."
   type        = string
