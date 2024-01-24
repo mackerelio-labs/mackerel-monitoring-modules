@@ -10,7 +10,7 @@ terraform {
 resource "aws_cloudwatch_event_rule" "this" {
   name                = var.rule_name
   description         = "created by mackerel-monitoring-modules"
-  state               = var.state
+  state               = var.is_enabled ? "ENABLED" : "DISABLED"
   schedule_expression = var.schedule_expression
 }
 

@@ -85,7 +85,7 @@ module "cw_logs_aggregator_rule_batch_jobs" {
 | --- | --- | --- |
 | `rule_name` | The name of the EventBridge rule. | |
 | `function_arn` | The ARN of the target Lambda function. | |
-| `state` | Whether the rules is enabled or not. See [the document](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_rule#state) | `"ENABLED"` |
+| `is_enabled` | Whether the rules is enabled or not. | `true` |
 | `api_key_name` | The name of the parameter of Parameter Store which stores the Mackerel API key. It is recommended to store the API key as a secure string. | |
 | `service_name` | The name of the service on Mackerel to which metrics are posted. | |
 | `log_group_name` | The name of the log group to be aggregated. | |
