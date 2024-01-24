@@ -1,8 +1,3 @@
-variable "region" {
-  description = "The AWS region in which the resources are created."
-  type        = string
-}
-
 variable "rule_name" {
   description = "The name of the EventBridge rule."
   type        = string

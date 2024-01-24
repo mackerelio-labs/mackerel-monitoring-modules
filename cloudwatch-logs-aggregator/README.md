@@ -27,17 +27,19 @@ The cloudwatch-logs-aggregator-lambda module manages a Lambda function that runs
 
 ### Example
 ``` hcl
+provider "aws" {
+  region = "ap-northeast-1"
+  // >= 5.27.0 is required
+}
+
 module "cw_logs_aggregator_lambda" {
   source = "github.com/mackerelio-labs/mackerel-monitoring-modules//cloudwatch-logs-aggregator/lambda?ref=v0.2.2"
-
-  region = "ap-northeast-1"
 }
 ```
 
 ### Variables
 | Name | Description | Default |
 | --- | --- | --- |
-| `region` | The AWS region in which the resources are created. | |
 | `iam_role_name` | The name of the Lambda function's execution role. | `"mackerel-cloudwatch-logs-aggregator-lambda"` |
 | `function_name` | The name of the Lambda function. | `"mackerel-cloudwatch-logs-aggregator"` |
 | `memory_size_in_mb` | The memory size of the Lambda function, in megabytes. | `128` |
@@ -52,10 +54,14 @@ You can attach multiple rules for a signle Lambda function.
 
 ### Example
 ``` hcl
+provider "aws" {
+  region = "ap-northeast-1"
+  // >= 5.27.0 is required
+}
+
 module "cw_logs_aggregator_rule_batch_jobs" {
   source = "github.com/mackerelio-labs/mackerel-monitoring-modules//cloudwatch-logs-aggregator/rule?ref=v0.2.2"
 
-  region       = "ap-northeast-1"
   rule_name    = "mackerel-cloudwatch-logs-aggregator-batch-jobs"
   function_arn = module.cw_logs_aggregator_lambda.function_arn
 
@@ -77,10 +83,9 @@ module "cw_logs_aggregator_rule_batch_jobs" {
 ### Variables
 | Name | Description | Default |
 | --- | --- | --- |
-| `region` | The AWS region in which the resources are created. | |
 | `rule_name` | The name of the EventBridge rule. | |
 | `function_arn` | The ARN of the target Lambda function. | |
-| `is_enabled` | Whether the rules is enabled or not. | `true` |
+| `state` | Whether the rules is enabled or not. See [the document](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_rule#state) | `"ENABLED"` |
 | `api_key_name` | The name of the parameter of Parameter Store which stores the Mackerel API key. It is recommended to store the API key as a secure string. | |
 | `service_name` | The name of the service on Mackerel to which metrics are posted. | |
 | `log_group_name` | The name of the log group to be aggregated. | |
