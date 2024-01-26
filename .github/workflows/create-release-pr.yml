@@ -1,5 +1,5 @@
 name: 'Create Release PR'
-run-name: Bump version - ${{ github.event.inputs.version }}
+run-name: Create Release PR - ${{ github.event.inputs.version }}
 on:
   workflow_dispatch:
     inputs:
