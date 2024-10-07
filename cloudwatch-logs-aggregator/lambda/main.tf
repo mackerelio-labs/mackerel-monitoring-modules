@@ -25,28 +25,29 @@ resource "aws_iam_role" "this" {
   })
 
   managed_policy_arns = ["arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"]
+}
 
-  inline_policy {
-    name = "cloudwatch-logs-aggregator-lambda"
-    policy = jsonencode({
-      Version = "2012-10-17"
-      Statement = [
-        {
-          Effect   = "Allow"
-          Action   = ["ssm:GetParameter"]
-          Resource = "*"
-        },
-        {
-          Effect = "Allow"
-          Action = [
-            "logs:StartQuery",
-            "logs:StopQuery",
-            "logs:GetQueryResults",
-          ]
-          Resource = "*"
-        },
-      ]
-    })
+resource "aws_iam_role_policy" "this" {
+  role   = aws_iam_role.this.id
+  name   = "cloudwatch-logs-aggregator-lambda"
+  policy = data.aws_iam_policy_document.this.json
+}
+
+data "aws_iam_policy_document" "this" {
+  version = "2012-10-17"
+  statement {
+    effect    = "Allow"
+    actions   = ["ssm:GetParameter"]
+    resources = ["*"]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "logs:StartQuery",
+      "logs:StopQuery",
+      "logs:GetQueryResults",
+    ]
+    resources = ["*"]
   }
 }
 
