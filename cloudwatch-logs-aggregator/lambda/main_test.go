@@ -140,7 +140,7 @@ func TestCreateMackerelClient_creates_new_client(t *testing.T) {
 	client, err := CreateMackerelClient("", "foobar")
 	assert.NoError(t, err)
 	assert.Equal(t, "foobar", client.APIKey)
-	assert.Equal(t, "mackerel-cloudwatch-logs-aggregator/"+version, client.UserAgent)
+	assert.Equal(t, "mackerel-cloudwatch-logs-aggregator/"+version(), client.UserAgent)
 }
 
 func TestCreateMackerelClient_set_base_url(t *testing.T) {
@@ -149,7 +149,7 @@ func TestCreateMackerelClient_set_base_url(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, apiBaseURL, client.BaseURL.String())
 	assert.Equal(t, "foobar", client.APIKey)
-	assert.Equal(t, "mackerel-cloudwatch-logs-aggregator/"+version, client.UserAgent)
+	assert.Equal(t, "mackerel-cloudwatch-logs-aggregator/"+version(), client.UserAgent)
 }
 
 type mockCWLogsService struct {
