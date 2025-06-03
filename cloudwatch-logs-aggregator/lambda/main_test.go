@@ -7,10 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	cwTypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	ssmTypes "github.com/aws/aws-sdk-go-v2/service/ssm/types"
+
 	"github.com/mackerelio/mackerel-client-go"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -105,21 +107,21 @@ func TestGetQueryTimeRange_returns_rounded_time_range(t *testing.T) {
 }
 
 type mockSSMService struct {
-	getParameterWithContext func(ctx aws.Context, input *ssm.GetParameterInput, opts ...request.Option) (*ssm.GetParameterOutput, error)
+	getParameter func(ctx context.Context, params *ssm.GetParameterInput, optFns ...func(*ssm.Options)) (*ssm.GetParameterOutput, error)
 }
 
-func (svc *mockSSMService) GetParameterWithContext(ctx aws.Context, input *ssm.GetParameterInput, opts ...request.Option) (*ssm.GetParameterOutput, error) {
-	return svc.getParameterWithContext(ctx, input, opts...)
+func (svc *mockSSMService) GetParameter(ctx context.Context, input *ssm.GetParameterInput, optFns ...func(*ssm.Options)) (*ssm.GetParameterOutput, error) {
+	return svc.getParameter(ctx, input, optFns...)
 }
 
 func TestGetAPIKey_returns_apiKey_retrieved_from_parameter_store(t *testing.T) {
 	ctx := context.Background()
 	var getParameterInput *ssm.GetParameterInput
 	svc := &mockSSMService{
-		getParameterWithContext: func(ctx aws.Context, input *ssm.GetParameterInput, opts ...request.Option) (*ssm.GetParameterOutput, error) {
+		getParameter: func(ctx context.Context, input *ssm.GetParameterInput, optFns ...func(*ssm.Options)) (*ssm.GetParameterOutput, error) {
 			getParameterInput = input
 			return &ssm.GetParameterOutput{
-				Parameter: &ssm.Parameter{
+				Parameter: &ssmTypes.Parameter{
 					Value: aws.String("foobar"),
 				},
 			}, nil
@@ -153,21 +155,21 @@ func TestCreateMackerelClient_set_base_url(t *testing.T) {
 }
 
 type mockCWLogsService struct {
-	startQueryWithContext      func(ctx aws.Context, input *cloudwatchlogs.StartQueryInput, opts ...request.Option) (*cloudwatchlogs.StartQueryOutput, error)
-	stopQueryWithContext       func(ctx aws.Context, input *cloudwatchlogs.StopQueryInput, opts ...request.Option) (*cloudwatchlogs.StopQueryOutput, error)
-	getQueryResultsWithContext func(ctx aws.Context, input *cloudwatchlogs.GetQueryResultsInput, opts ...request.Option) (*cloudwatchlogs.GetQueryResultsOutput, error)
+	startQuery      func(ctx context.Context, params *cloudwatchlogs.StartQueryInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.StartQueryOutput, error)
+	stopQuery       func(ctx context.Context, params *cloudwatchlogs.StopQueryInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.StopQueryOutput, error)
+	getQueryResults func(ctx context.Context, params *cloudwatchlogs.GetQueryResultsInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.GetQueryResultsOutput, error)
 }
 
-func (svc *mockCWLogsService) StartQueryWithContext(ctx aws.Context, input *cloudwatchlogs.StartQueryInput, opts ...request.Option) (*cloudwatchlogs.StartQueryOutput, error) {
-	return svc.startQueryWithContext(ctx, input, opts...)
+func (svc *mockCWLogsService) StartQuery(ctx context.Context, params *cloudwatchlogs.StartQueryInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.StartQueryOutput, error) {
+	return svc.startQuery(ctx, params, optFns...)
 }
 
-func (svc *mockCWLogsService) StopQueryWithContext(ctx aws.Context, input *cloudwatchlogs.StopQueryInput, opts ...request.Option) (*cloudwatchlogs.StopQueryOutput, error) {
-	return svc.stopQueryWithContext(ctx, input, opts...)
+func (svc *mockCWLogsService) StopQuery(ctx context.Context, params *cloudwatchlogs.StopQueryInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.StopQueryOutput, error) {
+	return svc.stopQuery(ctx, params, optFns...)
 }
 
-func (svc *mockCWLogsService) GetQueryResultsWithContext(ctx aws.Context, input *cloudwatchlogs.GetQueryResultsInput, opts ...request.Option) (*cloudwatchlogs.GetQueryResultsOutput, error) {
-	return svc.getQueryResultsWithContext(ctx, input, opts...)
+func (svc *mockCWLogsService) GetQueryResults(ctx context.Context, params *cloudwatchlogs.GetQueryResultsInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.GetQueryResultsOutput, error) {
+	return svc.getQueryResults(ctx, params, optFns...)
 }
 
 func TestRunQuery_returns_query_result_after_complete(t *testing.T) {
@@ -178,14 +180,14 @@ func TestRunQuery_returns_query_result_after_complete(t *testing.T) {
 	index := 0
 	outputs := []*cloudwatchlogs.GetQueryResultsOutput{
 		{
-			Status: aws.String(cloudwatchlogs.QueryStatusScheduled),
+			Status: cwTypes.QueryStatusScheduled,
 		},
 		{
-			Status: aws.String(cloudwatchlogs.QueryStatusRunning),
+			Status: cwTypes.QueryStatusRunning,
 		},
 		{
-			Status: aws.String(cloudwatchlogs.QueryStatusComplete),
-			Results: [][]*cloudwatchlogs.ResultField{
+			Status: cwTypes.QueryStatusComplete,
+			Results: [][]cwTypes.ResultField{
 				{
 					{
 						Field: aws.String("group"),
@@ -197,20 +199,20 @@ func TestRunQuery_returns_query_result_after_complete(t *testing.T) {
 					},
 				},
 			},
-			Statistics: &cloudwatchlogs.QueryStatistics{
-				BytesScanned:   aws.Float64(30.0),
-				RecordsScanned: aws.Float64(20.0),
-				RecordsMatched: aws.Float64(10.0),
+			Statistics: &cwTypes.QueryStatistics{
+				BytesScanned:   30.0,
+				RecordsScanned: 20.0,
+				RecordsMatched: 10.0,
 			},
 		},
 	}
 	svc := &mockCWLogsService{
-		startQueryWithContext: func(ctx aws.Context, input *cloudwatchlogs.StartQueryInput, opts ...request.Option) (*cloudwatchlogs.StartQueryOutput, error) {
-			startQueryInput = input
+		startQuery: func(ctx context.Context, params *cloudwatchlogs.StartQueryInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.StartQueryOutput, error) {
+			startQueryInput = params
 			return &cloudwatchlogs.StartQueryOutput{QueryId: aws.String(queryID)}, nil
 		},
-		getQueryResultsWithContext: func(ctx aws.Context, input *cloudwatchlogs.GetQueryResultsInput, opts ...request.Option) (*cloudwatchlogs.GetQueryResultsOutput, error) {
-			getQueryResultsInput = input
+		getQueryResults: func(ctx context.Context, params *cloudwatchlogs.GetQueryResultsInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.GetQueryResultsOutput, error) {
+			getQueryResultsInput = params
 			i := index
 			index += 1
 			return outputs[i], nil
@@ -236,7 +238,7 @@ func TestRunQuery_returns_query_result_after_complete(t *testing.T) {
 	assert.Equal(t, queryID, *getQueryResultsInput.QueryId)
 
 	assert.NoError(t, err)
-	assert.Equal(t, cloudwatchlogs.QueryStatusComplete, *result.Status)
+	assert.Equal(t, cwTypes.QueryStatusComplete, result.Status)
 	if assert.Len(t, result.Results, 1) {
 		if assert.Len(t, result.Results[0], 2) {
 			assert.Equal(t, "group", *result.Results[0][0].Field)
@@ -245,9 +247,9 @@ func TestRunQuery_returns_query_result_after_complete(t *testing.T) {
 			assert.Equal(t, "123", *result.Results[0][1].Value)
 		}
 	}
-	assert.Equal(t, 30.0, *result.Statistics.BytesScanned)
-	assert.Equal(t, 20.0, *result.Statistics.RecordsScanned)
-	assert.Equal(t, 10.0, *result.Statistics.RecordsMatched)
+	assert.Equal(t, 30.0, result.Statistics.BytesScanned)
+	assert.Equal(t, 20.0, result.Statistics.RecordsScanned)
+	assert.Equal(t, 10.0, result.Statistics.RecordsMatched)
 }
 
 func TestRunQuery_retries_if_failed_to_get_query_result(t *testing.T) {
@@ -257,8 +259,8 @@ func TestRunQuery_retries_if_failed_to_get_query_result(t *testing.T) {
 	outputs := []*cloudwatchlogs.GetQueryResultsOutput{
 		nil,
 		{
-			Status: aws.String(cloudwatchlogs.QueryStatusComplete),
-			Results: [][]*cloudwatchlogs.ResultField{
+			Status: cwTypes.QueryStatusComplete,
+			Results: [][]cwTypes.ResultField{
 				{
 					{
 						Field: aws.String("group"),
@@ -270,18 +272,18 @@ func TestRunQuery_retries_if_failed_to_get_query_result(t *testing.T) {
 					},
 				},
 			},
-			Statistics: &cloudwatchlogs.QueryStatistics{
-				BytesScanned:   aws.Float64(30.0),
-				RecordsScanned: aws.Float64(20.0),
-				RecordsMatched: aws.Float64(10.0),
+			Statistics: &cwTypes.QueryStatistics{
+				BytesScanned:   30.0,
+				RecordsScanned: 20.0,
+				RecordsMatched: 10.0,
 			},
 		},
 	}
 	svc := &mockCWLogsService{
-		startQueryWithContext: func(ctx aws.Context, input *cloudwatchlogs.StartQueryInput, opts ...request.Option) (*cloudwatchlogs.StartQueryOutput, error) {
+		startQuery: func(ctx context.Context, params *cloudwatchlogs.StartQueryInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.StartQueryOutput, error) {
 			return &cloudwatchlogs.StartQueryOutput{QueryId: aws.String(queryID)}, nil
 		},
-		getQueryResultsWithContext: func(ctx aws.Context, input *cloudwatchlogs.GetQueryResultsInput, opts ...request.Option) (*cloudwatchlogs.GetQueryResultsOutput, error) {
+		getQueryResults: func(ctx context.Context, params *cloudwatchlogs.GetQueryResultsInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.GetQueryResultsOutput, error) {
 			i := index
 			index += 1
 			if outputs[i] == nil {
@@ -300,7 +302,7 @@ func TestRunQuery_retries_if_failed_to_get_query_result(t *testing.T) {
 	result, err := RunQuery(ctx, logger, svc, logGroupName, query, timeRange)
 
 	assert.NoError(t, err)
-	assert.Equal(t, cloudwatchlogs.QueryStatusComplete, *result.Status)
+	assert.Equal(t, cwTypes.QueryStatusComplete, result.Status)
 	if assert.Len(t, result.Results, 1) {
 		if assert.Len(t, result.Results[0], 2) {
 			assert.Equal(t, "group", *result.Results[0][0].Field)
@@ -309,9 +311,9 @@ func TestRunQuery_retries_if_failed_to_get_query_result(t *testing.T) {
 			assert.Equal(t, "123", *result.Results[0][1].Value)
 		}
 	}
-	assert.Equal(t, 30.0, *result.Statistics.BytesScanned)
-	assert.Equal(t, 20.0, *result.Statistics.RecordsScanned)
-	assert.Equal(t, 10.0, *result.Statistics.RecordsMatched)
+	assert.Equal(t, 30.0, result.Statistics.BytesScanned)
+	assert.Equal(t, 20.0, result.Statistics.RecordsScanned)
+	assert.Equal(t, 10.0, result.Statistics.RecordsMatched)
 }
 
 func TestRunQuery_returns_error_if_no_success_after_retry(t *testing.T) {
@@ -319,10 +321,10 @@ func TestRunQuery_returns_error_if_no_success_after_retry(t *testing.T) {
 	queryID := "my-query-id"
 
 	svc := &mockCWLogsService{
-		startQueryWithContext: func(ctx aws.Context, input *cloudwatchlogs.StartQueryInput, opts ...request.Option) (*cloudwatchlogs.StartQueryOutput, error) {
+		startQuery: func(ctx context.Context, params *cloudwatchlogs.StartQueryInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.StartQueryOutput, error) {
 			return &cloudwatchlogs.StartQueryOutput{QueryId: aws.String(queryID)}, nil
 		},
-		getQueryResultsWithContext: func(ctx aws.Context, input *cloudwatchlogs.GetQueryResultsInput, opts ...request.Option) (*cloudwatchlogs.GetQueryResultsOutput, error) {
+		getQueryResults: func(ctx context.Context, params *cloudwatchlogs.GetQueryResultsInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.GetQueryResultsOutput, error) {
 			return nil, errors.New("test error")
 		},
 	}
@@ -342,12 +344,12 @@ func TestRunQuery_returns_error_if_query_failed(t *testing.T) {
 	ctx := context.Background()
 	queryID := "my-query-id"
 	svc := &mockCWLogsService{
-		startQueryWithContext: func(ctx aws.Context, input *cloudwatchlogs.StartQueryInput, opts ...request.Option) (*cloudwatchlogs.StartQueryOutput, error) {
+		startQuery: func(ctx context.Context, params *cloudwatchlogs.StartQueryInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.StartQueryOutput, error) {
 			return &cloudwatchlogs.StartQueryOutput{QueryId: aws.String(queryID)}, nil
 		},
-		getQueryResultsWithContext: func(ctx aws.Context, input *cloudwatchlogs.GetQueryResultsInput, opts ...request.Option) (*cloudwatchlogs.GetQueryResultsOutput, error) {
+		getQueryResults: func(ctx context.Context, params *cloudwatchlogs.GetQueryResultsInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.GetQueryResultsOutput, error) {
 			return &cloudwatchlogs.GetQueryResultsOutput{
-				Status: aws.String(cloudwatchlogs.QueryStatusFailed),
+				Status: cwTypes.QueryStatusFailed,
 			}, nil
 		},
 	}
@@ -360,7 +362,7 @@ func TestRunQuery_returns_error_if_query_failed(t *testing.T) {
 
 	_, err := RunQuery(ctx, logger, svc, logGroupName, query, timeRange)
 
-	assert.EqualError(t, err, fmt.Sprintf("query failed: %s", cloudwatchlogs.QueryStatusFailed))
+	assert.EqualError(t, err, fmt.Sprintf("query failed: %s", cwTypes.QueryStatusFailed))
 }
 
 func TestRunQuery_stops_query_if_canceled(t *testing.T) {
@@ -369,17 +371,17 @@ func TestRunQuery_stops_query_if_canceled(t *testing.T) {
 	var stopQueryInput *cloudwatchlogs.StopQueryInput
 	queryID := "my-query-id"
 	svc := &mockCWLogsService{
-		startQueryWithContext: func(ctx aws.Context, input *cloudwatchlogs.StartQueryInput, opts ...request.Option) (*cloudwatchlogs.StartQueryOutput, error) {
+		startQuery: func(ctx context.Context, params *cloudwatchlogs.StartQueryInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.StartQueryOutput, error) {
 			return &cloudwatchlogs.StartQueryOutput{QueryId: aws.String(queryID)}, nil
 		},
-		stopQueryWithContext: func(ctx aws.Context, input *cloudwatchlogs.StopQueryInput, opts ...request.Option) (*cloudwatchlogs.StopQueryOutput, error) {
-			stopQueryInput = input
-			return &cloudwatchlogs.StopQueryOutput{Success: aws.Bool(true)}, nil
+		stopQuery: func(ctx context.Context, params *cloudwatchlogs.StopQueryInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.StopQueryOutput, error) {
+			stopQueryInput = params
+			return &cloudwatchlogs.StopQueryOutput{Success: true}, nil
 		},
-		getQueryResultsWithContext: func(ctx aws.Context, input *cloudwatchlogs.GetQueryResultsInput, opts ...request.Option) (*cloudwatchlogs.GetQueryResultsOutput, error) {
+		getQueryResults: func(ctx context.Context, params *cloudwatchlogs.GetQueryResultsInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.GetQueryResultsOutput, error) {
 			c <- struct{}{}
 			return &cloudwatchlogs.GetQueryResultsOutput{
-				Status: aws.String(cloudwatchlogs.QueryStatusScheduled),
+				Status: cwTypes.QueryStatusScheduled,
 			}, nil
 		},
 	}
@@ -411,7 +413,7 @@ func getMetricValue(data []*mackerel.MetricValue, name string) *mackerel.MetricV
 }
 
 func TestGenerateMetricData_returns_empty_data_if_result_has_no_rows(t *testing.T) {
-	results := [][]*cloudwatchlogs.ResultField{}
+	results := [][]cwTypes.ResultField{}
 	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
 
 	data, err := GenerateMetricData(logger, results, time, "", "", "", nil)
@@ -420,7 +422,7 @@ func TestGenerateMetricData_returns_empty_data_if_result_has_no_rows(t *testing.
 }
 
 func TestGenerateMetricData_generates_metric_data_to_post(t *testing.T) {
-	results := [][]*cloudwatchlogs.ResultField{
+	results := [][]cwTypes.ResultField{
 		{
 			{
 				Field: aws.String("xxx"),
@@ -460,7 +462,7 @@ func TestGenerateMetricData_generates_metric_data_to_post(t *testing.T) {
 }
 
 func TestGenerateMetricData_appends_metric_name_prefix_if_exists(t *testing.T) {
-	results := [][]*cloudwatchlogs.ResultField{
+	results := [][]cwTypes.ResultField{
 		{
 			{
 				Field: aws.String("xxx"),
@@ -500,7 +502,7 @@ func TestGenerateMetricData_appends_metric_name_prefix_if_exists(t *testing.T) {
 }
 
 func TestGenerateMetricData_does_not_include_default_field_in_metric_names(t *testing.T) {
-	results := [][]*cloudwatchlogs.ResultField{
+	results := [][]cwTypes.ResultField{
 		{
 			{
 				Field: aws.String("xxx"),
@@ -540,7 +542,7 @@ func TestGenerateMetricData_does_not_include_default_field_in_metric_names(t *te
 }
 
 func TestGenerateMetricData_groups_metrics_by_group_field(t *testing.T) {
-	results := [][]*cloudwatchlogs.ResultField{
+	results := [][]cwTypes.ResultField{
 		{
 			{
 				Field: aws.String("group"),
@@ -623,7 +625,7 @@ func TestGenerateMetricData_groups_metrics_by_group_field(t *testing.T) {
 }
 
 func TestGenerateMetricData_use_default_values_for_missing_metrics(t *testing.T) {
-	results := [][]*cloudwatchlogs.ResultField{
+	results := [][]cwTypes.ResultField{
 		{
 			{
 				Field: aws.String("xxx"),
@@ -660,7 +662,7 @@ func TestGenerateMetricData_use_default_values_for_missing_metrics(t *testing.T)
 }
 
 func TestGenerateMetricData_use_all_default_values_if_result_has_no_rows(t *testing.T) {
-	results := [][]*cloudwatchlogs.ResultField{}
+	results := [][]cwTypes.ResultField{}
 	time := time.Date(2021, time.June, 6, 12, 20, 0, 0, time.UTC)
 	defaultMetrics := map[string]float64{
 		"xxx": 0.0,
@@ -684,7 +686,7 @@ func TestGenerateMetricData_use_all_default_values_if_result_has_no_rows(t *test
 }
 
 func TestGenerateMetricData_default_metric_names_are_compared_with_processed_metric_names(t *testing.T) {
-	results := [][]*cloudwatchlogs.ResultField{
+	results := [][]cwTypes.ResultField{
 		{
 			{
 				Field: aws.String("xxx"),
@@ -715,7 +717,7 @@ func TestGenerateMetricData_default_metric_names_are_compared_with_processed_met
 }
 
 func TestGenerateMetricData_skips_fields_that_could_not_be_parsed(t *testing.T) {
-	results := [][]*cloudwatchlogs.ResultField{
+	results := [][]cwTypes.ResultField{
 		{
 			{
 				Field: aws.String("xxx"),
@@ -750,7 +752,7 @@ func TestGenerateMetricData_skips_fields_that_could_not_be_parsed(t *testing.T) 
 }
 
 func TestGenerateMetricData_skips_fields_that_have_empty_metric_name(t *testing.T) {
-	results := [][]*cloudwatchlogs.ResultField{
+	results := [][]cwTypes.ResultField{
 		{
 			{
 				Field: aws.String("xxx"),
@@ -785,7 +787,7 @@ func TestGenerateMetricData_skips_fields_that_have_empty_metric_name(t *testing.
 }
 
 func TestGenerateMetricData_skips_fields_that_have_duplicate_metric_name(t *testing.T) {
-	results := [][]*cloudwatchlogs.ResultField{
+	results := [][]cwTypes.ResultField{
 		{
 			{
 				Field: aws.String("xxx"),
@@ -839,7 +841,7 @@ func TestGenerateMetricData_skips_fields_that_have_duplicate_metric_name(t *test
 }
 
 func TestGenerateMetricData_sanitizes_metric_name_components(t *testing.T) {
-	results := [][]*cloudwatchlogs.ResultField{
+	results := [][]cwTypes.ResultField{
 		{
 			{
 				Field: aws.String("group"),
