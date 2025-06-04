@@ -347,7 +347,7 @@ func joinMetricNameComponents(metricNamePrefix, groupName, name string, isDefaul
 	return strings.Join(names, ".")
 }
 
-var invalidMetricNameCharRegexp = regexp.MustCompile("[^a-zA-Z0-9\\._\\-]")
+var invalidMetricNameCharRegexp = regexp.MustCompile(`[^a-zA-Z0-9\\._\\-]`)
 
 func sanitizeMetricName(name string) string {
 	return invalidMetricNameCharRegexp.ReplaceAllString(name, "")
