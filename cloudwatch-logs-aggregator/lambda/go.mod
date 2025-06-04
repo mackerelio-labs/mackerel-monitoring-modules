@@ -1,6 +1,6 @@
 module github.com/mackerelio-labs/mackerel-monitoring-modules/cloudwatch-logs-aggregator/lambda
 
-go 1.24
+go 1.24.0
 
 toolchain go1.24.3
 

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -168,7 +169,7 @@ func CreateMackerelClient(apiBaseURL, apiKey string) (*mackerel.Client, error) {
 		}
 		client.BaseURL = u
 	}
-	client.UserAgent = "mackerel-cloudwatch-logs-aggregator/" + version
+	client.UserAgent = "mackerel-cloudwatch-logs-aggregator/" + version()
 	return client, nil
 }
 
@@ -395,4 +396,21 @@ func PostMetricData(
 		logger.WithField("count", len(data)).Infof("posted metric data")
 	}
 	return err
+}
+
+func version() (version string) {
+	version = "unknown"
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+	// trim a prefix `v`
+	version, _ = strings.CutPrefix(info.Main.Version, "v")
+
+	// strings like "v0.1.2-0.20060102150405-xxxxxxxxxxxx" are long, so they are cut out.
+	if strings.Contains(version, "-") {
+		index := strings.IndexRune(version, '-')
+		version = version[0:index]
+	}
+	return
 }
