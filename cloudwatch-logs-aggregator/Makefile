@@ -8,5 +8,4 @@ test:
 
 .PHONY: bump-version
 bump-version:
-	$(MAKE) -C lambda bump-version
 	perl -i -pe 's/\?ref=v[\d\.]+/\?ref=v$(VERSION)/g' README.md

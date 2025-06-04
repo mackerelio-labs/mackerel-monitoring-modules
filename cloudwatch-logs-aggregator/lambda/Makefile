@@ -7,7 +7,3 @@ build:
 .PHONY: test
 test:
 	go test
-
-.PHONY: bump-version
-bump-version:
-	perl -i -pe 's/version = "[\d\.]+"/version = "$(VERSION)"/g' version.go
