@@ -19,7 +19,7 @@ jobs:
         env:
           VERSION: ${{ github.event.inputs.version }}
       - run: make build
-      - uses: peter-evans/create-pull-request@v4
+      - uses: peter-evans/create-pull-request@v7
         with:
           branch: 'release-v${{ github.event.inputs.version }}'
           commit-message: 'chore: bump to v${{ github.event.inputs.version }}'
