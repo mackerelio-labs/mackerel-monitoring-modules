@@ -14,11 +14,11 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-lambda-go/lambdacontext"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/mackerelio/mackerel-client-go"
 	"github.com/sirupsen/logrus"
 )
@@ -64,13 +64,12 @@ func HandleRequest(ctx context.Context, event Event) error {
 		return err
 	}
 
-	sess, err := session.NewSession()
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		requestLogger.Errorf("failed to create AWS session: %v", err)
 		return err
 	}
 
-	ssmSvc := ssm.New(sess)
+	ssmSvc := ssm.NewFromConfig(cfg)
 	apiKey, err := GetAPIKey(ctx, ssmSvc, event.APIKeyName)
 	if err != nil {
 		requestLogger.Errorf("failed to get API key: %v", err)
@@ -82,7 +81,7 @@ func HandleRequest(ctx context.Context, event Event) error {
 		return err
 	}
 
-	cwLogsSvc := cloudwatchlogs.New(sess)
+	cwLogsSvc := cloudwatchlogs.NewFromConfig(cfg)
 	timeRange := GetQueryTimeRange(
 		time.Now(),
 		time.Duration(event.IntervalInMinutes)*time.Minute,
@@ -147,11 +146,11 @@ func ValidateInput(event *Event) error {
 }
 
 type SSMService interface {
-	GetParameterWithContext(ctx aws.Context, input *ssm.GetParameterInput, opts ...request.Option) (*ssm.GetParameterOutput, error)
+	GetParameter(ctx context.Context, params *ssm.GetParameterInput, optFns ...func(*ssm.Options)) (*ssm.GetParameterOutput, error)
 }
 
 func GetAPIKey(ctx context.Context, svc SSMService, apiKeyName string) (string, error) {
-	p, err := svc.GetParameterWithContext(ctx, &ssm.GetParameterInput{
+	p, err := svc.GetParameter(ctx, &ssm.GetParameterInput{
 		Name:           aws.String(apiKeyName),
 		WithDecryption: aws.Bool(true),
 	})
@@ -191,9 +190,9 @@ func GetQueryTimeRange(currentTime time.Time, interval, offset time.Duration) *Q
 }
 
 type CWLogsService interface {
-	StartQueryWithContext(ctx aws.Context, input *cloudwatchlogs.StartQueryInput, opts ...request.Option) (*cloudwatchlogs.StartQueryOutput, error)
-	StopQueryWithContext(ctx aws.Context, input *cloudwatchlogs.StopQueryInput, opts ...request.Option) (*cloudwatchlogs.StopQueryOutput, error)
-	GetQueryResultsWithContext(ctx aws.Context, input *cloudwatchlogs.GetQueryResultsInput, opts ...request.Option) (*cloudwatchlogs.GetQueryResultsOutput, error)
+	StartQuery(ctx context.Context, params *cloudwatchlogs.StartQueryInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.StartQueryOutput, error)
+	StopQuery(ctx context.Context, params *cloudwatchlogs.StopQueryInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.StopQueryOutput, error)
+	GetQueryResults(ctx context.Context, params *cloudwatchlogs.GetQueryResultsInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.GetQueryResultsOutput, error)
 }
 
 func RunQuery(
@@ -203,7 +202,7 @@ func RunQuery(
 	logGroupName, query string,
 	timeRange *QueryTimeRange,
 ) (*cloudwatchlogs.GetQueryResultsOutput, error) {
-	q, err := svc.StartQueryWithContext(ctx, &cloudwatchlogs.StartQueryInput{
+	q, err := svc.StartQuery(ctx, &cloudwatchlogs.StartQueryInput{
 		LogGroupName: aws.String(logGroupName),
 		StartTime:    aws.Int64(timeRange.StartTime.Unix()),
 		EndTime:      aws.Int64(timeRange.EndTime.Unix()),
@@ -223,17 +222,17 @@ func RunQuery(
 		select {
 		case <-ctx.Done():
 			queryLogger.Debug("stopping query")
-			r, err := svc.StopQueryWithContext(context.Background(), &cloudwatchlogs.StopQueryInput{
+			r, err := svc.StopQuery(context.Background(), &cloudwatchlogs.StopQueryInput{
 				QueryId: q.QueryId,
 			})
-			if err != nil || !*r.Success {
+			if err != nil || !r.Success {
 				// Perhaps we should retry?
 				queryLogger.Warnf("failed to stop query: %v", err)
 			}
 			return nil, ctx.Err()
 		case <-ticker.C:
 			queryLogger.Debug("getting query results")
-			r, err := svc.GetQueryResultsWithContext(ctx, &cloudwatchlogs.GetQueryResultsInput{
+			r, err := svc.GetQueryResults(ctx, &cloudwatchlogs.GetQueryResultsInput{
 				QueryId: q.QueryId,
 			})
 			if err != nil {
@@ -246,23 +245,23 @@ func RunQuery(
 				return nil, fmt.Errorf("failed to get query results: %w", err)
 			}
 			retryCount = 0
-			switch *r.Status {
-			case cloudwatchlogs.QueryStatusScheduled, cloudwatchlogs.QueryStatusRunning:
-				queryLogger.WithField("status", *r.Status).Debug("waiting for query")
+			switch r.Status {
+			case types.QueryStatusScheduled, types.QueryStatusRunning:
+				queryLogger.WithField("status", r.Status).Debug("waiting for query")
 				continue
-			case cloudwatchlogs.QueryStatusComplete:
+			case types.QueryStatusComplete:
 				queryLogger.WithFields(logrus.Fields{
 					"bytes_scanned":   r.Statistics.BytesScanned,
 					"records_scanned": r.Statistics.RecordsScanned,
 					"records_matched": r.Statistics.RecordsMatched,
 				}).Info("query complete")
 				return r, nil
-			case cloudwatchlogs.QueryStatusFailed, cloudwatchlogs.QueryStatusCancelled, cloudwatchlogs.QueryStatusTimeout:
-				return nil, fmt.Errorf("query failed: %s", *r.Status)
-			case cloudwatchlogs.QueryStatusUnknown:
+			case types.QueryStatusFailed, types.QueryStatusCancelled, types.QueryStatusTimeout:
+				return nil, fmt.Errorf("query failed: %s", r.Status)
+			case types.QueryStatusUnknown:
 				fallthrough
 			default:
-				return nil, fmt.Errorf("unexpected query status: %s", *r.Status)
+				return nil, fmt.Errorf("unexpected query status: %s", r.Status)
 			}
 		}
 	}
@@ -283,7 +282,7 @@ func withFilterByTimeRange(query string, timeRange *QueryTimeRange) string {
 
 func GenerateMetricData(
 	logger logrus.FieldLogger,
-	results [][]*cloudwatchlogs.ResultField,
+	results [][]types.ResultField,
 	time time.Time,
 	metricNamePrefix, groupField, defaultField string,
 	defaultMetrics map[string]float64,
