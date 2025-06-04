@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"regexp"
@@ -20,7 +21,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/mackerelio/mackerel-client-go"
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -53,14 +53,11 @@ func HandleRequest(ctx context.Context, event Event) error {
 	}
 
 	logger := createLogger(os.Getenv("LOG_LEVEL"))
-	requestLogger := logger.WithFields(logrus.Fields{
-		"aws_request_id": lctx.AwsRequestID,
-		"rule_name":      event.RuleName,
-	})
+	requestLogger := logger.With("aws_request_id", lctx.AwsRequestID).With("rule_name", event.RuleName)
 
 	err := ValidateInput(&event)
 	if err != nil {
-		requestLogger.Errorf("validation error: %v", err)
+		requestLogger.Error("validation error", slog.Any("error", err))
 		return err
 	}
 
@@ -72,12 +69,12 @@ func HandleRequest(ctx context.Context, event Event) error {
 	ssmSvc := ssm.NewFromConfig(cfg)
 	apiKey, err := GetAPIKey(ctx, ssmSvc, event.APIKeyName)
 	if err != nil {
-		requestLogger.Errorf("failed to get API key: %v", err)
+		requestLogger.Error("failed to get API key", slog.Any("error", err))
 		return err
 	}
 	client, err := CreateMackerelClient(event.APIBaseURL, apiKey)
 	if err != nil {
-		requestLogger.Errorf("failed to create Mackerel client: %v", err)
+		requestLogger.Error("failed to create Mackerel client", slog.Any("error", err))
 		return err
 	}
 
@@ -89,7 +86,7 @@ func HandleRequest(ctx context.Context, event Event) error {
 	)
 	result, err := RunQuery(ctx, requestLogger, cwLogsSvc, event.LogGroupName, event.Query, timeRange)
 	if err != nil {
-		requestLogger.Errorf("failed to query: %v", err)
+		requestLogger.Error("failed to query", slog.Any("error", err))
 		return err
 	}
 
@@ -99,28 +96,26 @@ func HandleRequest(ctx context.Context, event Event) error {
 		event.MetricNamePrefix, event.GroupField, event.DefaultField, event.DefaultMetrics,
 	)
 	if err != nil {
-		requestLogger.Errorf("failed to generate metric data: %v", err)
+		requestLogger.Error("failed to generate metric data", slog.Any("error", err))
 		return err
 	}
 	err = PostMetricData(requestLogger, client, event.ServiceName, data)
 	if err != nil {
-		requestLogger.Errorf("failed to post metric data: %v", err)
+		requestLogger.Error("failed to post metric data", slog.Any("error", err))
 		return err
 	}
 
 	return nil
 }
 
-func createLogger(levelStr string) *logrus.Logger {
-	logger := logrus.New()
-	logger.SetFormatter(&logrus.JSONFormatter{})
-	logger.SetLevel(logrus.InfoLevel)
+func createLogger(levelStr string) *slog.Logger {
+	opts := &slog.HandlerOptions{Level: slog.LevelInfo}
 	if levelStr != "" {
-		if level, err := logrus.ParseLevel(levelStr); err == nil {
-			logger.SetLevel(level)
-		}
+		level := &slog.LevelVar{}
+		level.UnmarshalText([]byte(levelStr))
+		opts.Level = level
 	}
-	return logger
+	return slog.New(slog.NewJSONHandler(os.Stderr, opts))
 }
 
 func ValidateInput(event *Event) error {
@@ -197,7 +192,7 @@ type CWLogsService interface {
 
 func RunQuery(
 	ctx context.Context,
-	logger logrus.FieldLogger,
+	logger *slog.Logger,
 	svc CWLogsService,
 	logGroupName, query string,
 	timeRange *QueryTimeRange,
@@ -214,7 +209,7 @@ func RunQuery(
 		// Perhaps we should retry?
 		return nil, fmt.Errorf("failed to start query: %w", err)
 	}
-	queryLogger := logger.WithField("query_id", *q.QueryId)
+	queryLogger := logger.With("query_id", *q.QueryId)
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 	retryCount := 0
@@ -227,7 +222,7 @@ func RunQuery(
 			})
 			if err != nil || !r.Success {
 				// Perhaps we should retry?
-				queryLogger.Warnf("failed to stop query: %v", err)
+				queryLogger.Warn("failed to stop query", slog.Any("error", err))
 			}
 			return nil, ctx.Err()
 		case <-ticker.C:
@@ -239,7 +234,7 @@ func RunQuery(
 				// retry 3 times
 				if retryCount < 3 {
 					retryCount += 1
-					queryLogger.Debugf("failed to get query results; will retry (count = %d)", retryCount)
+					queryLogger.Debug(fmt.Sprintf("failed to get query results; will retry (count = %d)", retryCount))
 					continue
 				}
 				return nil, fmt.Errorf("failed to get query results: %w", err)
@@ -247,14 +242,13 @@ func RunQuery(
 			retryCount = 0
 			switch r.Status {
 			case types.QueryStatusScheduled, types.QueryStatusRunning:
-				queryLogger.WithField("status", r.Status).Debug("waiting for query")
+				queryLogger.With("status", r.Status).Debug("waiting for query")
 				continue
 			case types.QueryStatusComplete:
-				queryLogger.WithFields(logrus.Fields{
-					"bytes_scanned":   r.Statistics.BytesScanned,
-					"records_scanned": r.Statistics.RecordsScanned,
-					"records_matched": r.Statistics.RecordsMatched,
-				}).Info("query complete")
+				queryLogger.With("bytes_scanned", r.Statistics.BytesScanned).
+					With("records_scanned", r.Statistics.RecordsScanned).
+					With("records_matched", r.Statistics.RecordsMatched).
+					Info("query complete")
 				return r, nil
 			case types.QueryStatusFailed, types.QueryStatusCancelled, types.QueryStatusTimeout:
 				return nil, fmt.Errorf("query failed: %s", r.Status)
@@ -281,7 +275,7 @@ func withFilterByTimeRange(query string, timeRange *QueryTimeRange) string {
 }
 
 func GenerateMetricData(
-	logger logrus.FieldLogger,
+	logger *slog.Logger,
 	results [][]types.ResultField,
 	time time.Time,
 	metricNamePrefix, groupField, defaultField string,
@@ -302,7 +296,7 @@ func GenerateMetricData(
 		}
 		groupLogger := logger
 		if groupName != "" {
-			groupLogger = groupLogger.WithField("group_name", groupName)
+			groupLogger = groupLogger.With("group_name", groupName)
 		}
 		for _, column := range row {
 			if *column.Field == groupField {
@@ -313,18 +307,18 @@ func GenerateMetricData(
 			valueStr := *column.Value
 			value, err := strconv.ParseFloat(valueStr, 64)
 			if err != nil {
-				groupLogger.WithField("name", name).Warnf("field skipped: failed to parse value %#v", valueStr)
+				groupLogger.With("name", name).Warn(fmt.Sprintf("field skipped: failed to parse value %#v", valueStr))
 				continue
 			}
 			metricName := sanitizeMetricName(
 				joinMetricNameComponents(metricNamePrefix, groupName, name, isDefaultField),
 			)
 			if metricName == "" {
-				groupLogger.WithField("name", name).Warn("field skipped: empty metric name")
+				groupLogger.With("name", name).Warn("field skipped: empty metric name")
 				continue
 			}
 			if _, seen := seenMetricNames[metricName]; seen {
-				groupLogger.WithField("name", name).Warnf("field skipped: duplicate metric name %s", metricName)
+				groupLogger.With("name", name).Warn(fmt.Sprintf("field skipped: duplicate metric name %s", metricName))
 				continue
 			}
 			seenMetricNames[metricName] = struct{}{}
@@ -385,7 +379,7 @@ type MackerelClient interface {
 }
 
 func PostMetricData(
-	logger logrus.FieldLogger,
+	logger *slog.Logger,
 	client MackerelClient,
 	serviceName string,
 	data []*mackerel.MetricValue,
@@ -393,7 +387,7 @@ func PostMetricData(
 	logger.Debug("posting metric data")
 	err := client.PostServiceMetricValues(serviceName, data)
 	if err == nil {
-		logger.WithField("count", len(data)).Infof("posted metric data")
+		logger.With("count", len(data)).Info("posted metric data")
 	}
 	return err
 }

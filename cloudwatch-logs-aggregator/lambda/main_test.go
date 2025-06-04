@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"os"
 	"testing"
 	"time"
 
@@ -14,15 +16,13 @@ import (
 	ssmTypes "github.com/aws/aws-sdk-go-v2/service/ssm/types"
 
 	"github.com/mackerelio/mackerel-client-go"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
-var logger = logrus.New()
+var logger *slog.Logger
 
 func init() {
-	logger.SetFormatter(&logrus.JSONFormatter{})
-	logger.SetLevel(logrus.DebugLevel)
+	logger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
 }
 
 var baseEvent = Event{
