@@ -33,7 +33,7 @@ provider "aws" {
 }
 
 module "cw_logs_aggregator_lambda" {
-  source = "github.com/mackerelio-labs/mackerel-monitoring-modules//cloudwatch-logs-aggregator/lambda?ref=v0.4.1"
+  source = "github.com/mackerelio-labs/mackerel-monitoring-modules//cloudwatch-logs-aggregator/lambda?ref=v0.4.2"
 }
 ```
 
@@ -60,7 +60,7 @@ provider "aws" {
 }
 
 module "cw_logs_aggregator_rule_batch_jobs" {
-  source = "github.com/mackerelio-labs/mackerel-monitoring-modules//cloudwatch-logs-aggregator/rule?ref=v0.4.1"
+  source = "github.com/mackerelio-labs/mackerel-monitoring-modules//cloudwatch-logs-aggregator/rule?ref=v0.4.2"
 
   rule_name    = "mackerel-cloudwatch-logs-aggregator-batch-jobs"
   function_arn = module.cw_logs_aggregator_lambda.function_arn
