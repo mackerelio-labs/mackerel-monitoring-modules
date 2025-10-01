@@ -8,8 +8,26 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: daily
+    cooldown:
+      default-days: 5
+      include:
+        - "*"
   - package-ecosystem: gomod
     directory: cloudwatch-logs-aggregator/lambda
     schedule:
-      interval: weekly
+      interval: daily
+    cooldown:
+      default-days: 5
+      include:
+        - "*"
+      exclude:
+        - "github.com/mackerelio/*"
+        - "github.com/aws/aws-lambda-go"
+        - "github.com/aws/aws-sdk-go-v2"
+        - "github.com/aws/aws-sdk-go-v2/*"
+    groups:
+      aws/aws-sdk-go-v2:
+        patterns:
+          - "github.com/aws/aws-sdk-go-v2"
+          - "github.com/aws/aws-sdk-go-v2/*"

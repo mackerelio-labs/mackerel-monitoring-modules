@@ -11,15 +11,15 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version-file: cloudwatch-logs-aggregator/lambda/go.mod
       - run: make bump-version
         env:
           VERSION: ${{ github.event.inputs.version }}
       - run: make build
-      - uses: peter-evans/create-pull-request@v7
+      - uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
         with:
           branch: 'release-v${{ github.event.inputs.version }}'
           commit-message: 'chore: bump to v${{ github.event.inputs.version }}'
