@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.50.0
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.59.0
 	github.com/mackerelio/mackerel-client-go v0.26.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
