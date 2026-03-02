@@ -60,7 +60,7 @@ resource "aws_lambda_function" "this" {
   description   = "created by mackerel-monitoring-modules"
   role          = aws_iam_role.this.arn
 
-  runtime     = "provided.al2"
+  runtime     = "provided.al2023"
   memory_size = var.memory_size_in_mb
   timeout     = var.timeout_in_seconds
   filename    = local.function_zip
