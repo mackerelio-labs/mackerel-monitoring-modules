@@ -1,8 +1,8 @@
 module github.com/mackerelio-labs/mackerel-monitoring-modules/cloudwatch-logs-aggregator/lambda
 
-go 1.24.0
+go 1.25.0
 
-toolchain go1.24.3
+toolchain go1.26.2
 
 require (
 	github.com/aws/aws-lambda-go v1.54.0

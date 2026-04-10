@@ -367,7 +367,7 @@ func TestRunQuery_returns_error_if_query_failed(t *testing.T) {
 
 func TestRunQuery_stops_query_if_canceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	c := make(chan interface{})
+	c := make(chan any)
 	var stopQueryInput *cloudwatchlogs.StopQueryInput
 	queryID := "my-query-id"
 	svc := &mockCWLogsService{
