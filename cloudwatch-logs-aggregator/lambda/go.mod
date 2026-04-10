@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.14
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.68.0
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.68.4
-	github.com/mackerelio/mackerel-client-go v0.40.0
+	github.com/mackerelio/mackerel-client-go v0.41.0
 	github.com/stretchr/testify v1.11.1
 )
 
