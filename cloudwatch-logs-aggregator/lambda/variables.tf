@@ -33,3 +33,9 @@ variable "tags" {
   type        = map(any)
   default     = {}
 }
+
+variable "lambda_function_log_group_tags" {
+  description = "Tags of the Lambda function's log group"
+  type        = map(any)
+  default     = {}
+}
