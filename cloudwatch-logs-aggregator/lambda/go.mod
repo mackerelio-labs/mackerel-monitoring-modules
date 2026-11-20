@@ -1,8 +1,6 @@
 module github.com/mackerelio-labs/mackerel-monitoring-modules/cloudwatch-logs-aggregator/lambda
 
-go 1.26
-
-toolchain go1.26.2
+go 1.26.10
 
 require (
 	github.com/aws/aws-lambda-go v1.55.1
@@ -10,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.33.6
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.89.0
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.79.0
-	github.com/mackerelio/mackerel-client-go v0.47.0
+	github.com/mackerelio/mackerel-client-go v0.48.0
 	github.com/stretchr/testify v1.12.1
 )
 
